@@ -49,7 +49,7 @@ async def search(request: SearchRequest):
 
     # Run searches in parallel
     tasks = [
-        search_mercadolivre(request.product),
+        search_mercadolivre(request.product, request.crawl4ai_url),
         search_shopee(request.product, request.crawl4ai_url),
     ]
 
@@ -60,6 +60,7 @@ async def search(request: SearchRequest):
 
     for result in marketplace_results:
         if isinstance(result, Exception):
+            print(f"[Server] Task error: {result}")
             continue
         if result and result["offers"]:
             offers = []
