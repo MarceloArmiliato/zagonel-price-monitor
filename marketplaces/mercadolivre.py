@@ -1,4 +1,5 @@
 import httpx
+import traceback
 
 async def search_mercadolivre(product: str) -> dict:
     """
@@ -13,27 +14,31 @@ async def search_mercadolivre(product: str) -> dict:
             "sort": "relevance"
         }
 
+        print(f"[Mercado Livre] Searching for: {product}")
+        print(f"[Mercado Livre] URL: {url}?q={product}&limit=50")
+
         async with httpx.AsyncClient(timeout=30) as client:
             response = await client.get(url, params=params)
+            print(f"[Mercado Livre] Status: {response.status_code}")
+
             data = response.json()
 
         if "results" not in data:
+            print(f"[Mercado Livre] No results key. Response: {str(data)[:500]}")
             return {"marketplace": "Mercado Livre", "offers": []}
 
-        offers = []
-        seen_sellers = set()
+        print(f"[Mercado Livre] Found {len(data['results'])} results")
 
+        offers = []
         for item in data["results"]:
             seller_name = item.get("seller", {}).get("nickname", "Desconhecido")
             price = item.get("price", 0)
             link = item.get("permalink", "")
             title = item.get("title", "")
 
-            # Skip items with price 0 or None
             if not price or price <= 0:
                 continue
 
-            # Filter: keep only items that match the product name reasonably
             offers.append({
                 "seller": seller_name,
                 "price": float(price),
@@ -41,11 +46,13 @@ async def search_mercadolivre(product: str) -> dict:
                 "title": title
             })
 
+        print(f"[Mercado Livre] Returning {len(offers)} offers")
         return {
             "marketplace": "Mercado Livre",
             "offers": offers
         }
 
     except Exception as e:
-        print(f"[Mercado Livre] Error: {e}")
+        print(f"[Mercado Livre] ERROR: {e}")
+        print(f"[Mercado Livre] TRACEBACK: {traceback.format_exc()}")
         return {"marketplace": "Mercado Livre", "offers": []}
