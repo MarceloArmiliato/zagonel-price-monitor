@@ -2,10 +2,6 @@ import httpx
 import traceback
 
 async def search_mercadolivre(product: str) -> dict:
-    """
-    Search Mercado Livre using their public API.
-    No authentication required for basic searches.
-    """
     try:
         url = "https://api.mercadolibre.com/sites/MLB/search"
         params = {
@@ -14,17 +10,29 @@ async def search_mercadolivre(product: str) -> dict:
             "sort": "relevance"
         }
 
-        print(f"[Mercado Livre] Searching for: {product}")
-        print(f"[Mercado Livre] URL: {url}?q={product}&limit=50")
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+            "Accept": "application/json",
+            "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8",
+            "Referer": "https://www.mercadolivre.com.br/"
+        }
 
-        async with httpx.AsyncClient(timeout=30) as client:
+        print(f"[Mercado Livre] Searching for: {product}")
+
+        async with httpx.AsyncClient(timeout=30, headers=headers) as client:
             response = await client.get(url, params=params)
             print(f"[Mercado Livre] Status: {response.status_code}")
+
+            if response.status_code == 403:
+                print("[Mercado Livre] API blocked. Trying alternative endpoint...")
+                alt_url = f"https://api.mercadolibre.com/sites/MLB/search?q={product}&limit=50"
+                response = await client.get(alt_url)
+                print(f"[Mercado Livre] Alt Status: {response.status_code}")
 
             data = response.json()
 
         if "results" not in data:
-            print(f"[Mercado Livre] No results key. Response: {str(data)[:500]}")
+            print(f"[Mercado Livre] No results. Response: {str(data)[:500]}")
             return {"marketplace": "Mercado Livre", "offers": []}
 
         print(f"[Mercado Livre] Found {len(data['results'])} results")
